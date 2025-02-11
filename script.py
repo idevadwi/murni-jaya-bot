@@ -1,20 +1,19 @@
 import pandas as pd
 from telegram import Update
 from telegram.ext import ApplicationBuilder, MessageHandler, CommandHandler, filters, CallbackContext
+import os
 
 # Load product data from Excel
 DATA_FILE = "daftar_barang.xlsx"  # Ensure this file exists
 df = pd.read_excel(DATA_FILE)
 
-# Function to search for products (supports partial matching)
+# Function to search for products
 def search_products(keyword):
-    keyword = keyword.strip().upper()  # Normalize input
-
-    # Search for products containing the keyword (not just prefix match)
+    keyword = keyword.strip().upper()
     results = df[df["Nama Item"].str.contains(keyword, case=False, na=False)].sort_values(by="Nama Item")
 
     if results.empty:
-        return "❌ Barang tidak ditemukan. Coba dengan kata lain."
+        return "❌ Barang tidak ditemukan. Coba kata lain."
 
     response = "📦 *Hasil Pencarian:*\n"
     count = 0
@@ -27,8 +26,8 @@ def search_products(keyword):
             f"   🛒 Harga Jual: Rp{row['Harga Jual']:,.0f}\n\n"
         )
         count += 1
-        if count >= 10:  # Limit to 10 results to prevent spam
-            response += "⚠️ *Terlalu banyak hasil. Gunakan kata yang lebih spesifik.*"
+        if count >= 10:
+            response += "⚠️ *Terlalu banyak hasil. Gunakan kata lebih spesifik.*"
             break
 
     return response
@@ -47,23 +46,17 @@ async def start(update: Update, context: CallbackContext):
         "Contoh:\n"
         "🔍 *BERAS* → Menampilkan semua jenis beras.\n"
         "🔍 *SABUN* → Menampilkan semua produk sabun.\n"
-        "🔍 *LEM TIKUS* → Menampilkan lem tikus yang tersedia.\n"
     )
     await update.message.reply_text(welcome_text, parse_mode="Markdown")
 
-# Bot token (replace with your actual bot token)
-TOKEN = "7841565359:AAFrSLNRb0q3151jXPBhlan8IHpOs5VLWBY"
+# Get bot token from Railway Environment Variables
+TOKEN = os.getenv("TOKEN")
 
 # Build the bot
 app = ApplicationBuilder().token(TOKEN).build()
-
-# Add handlers
 app.add_handler(CommandHandler("start", start))
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
 # Run the bot
 print("🤖 Bot is running...")
 app.run_polling()
-
-
-
